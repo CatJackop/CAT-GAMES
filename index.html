@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="theme-color" content="#101827">
+<title>CAT GAMES — Endless Runner</title>
+<style>
+:root{--bg:#101827;--panel:#18243a;--yellow:#ffd84d;--cyan:#72f1ff;--white:#f5f7ff}
+*{box-sizing:border-box}
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(--white);font-family:system-ui,-apple-system,Segoe UI,sans-serif;touch-action:manipulation}
+body{display:flex;align-items:center;justify-content:center;padding:12px}
+.app{width:min(100%,1000px);display:flex;flex-direction:column;gap:10px}
+.topbar{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.brand{font-weight:1000;letter-spacing:1px;font-size:clamp(18px,4vw,28px);color:var(--yellow);text-shadow:3px 3px #774a00}
+.brand span{color:var(--cyan)}
+.stats{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+.pill{background:var(--panel);border:1px solid #30405b;border-radius:9px;padding:7px 11px;font-weight:800;font-size:13px}
+.gameframe{position:relative;border:3px solid #34435d;border-radius:14px;overflow:hidden;background:#9ce7ff;box-shadow:0 14px 45px #0007}
+canvas{display:block;width:100%;height:auto;aspect-ratio:16/9;image-rendering:pixelated}
+.overlay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:#0a1229b8;padding:18px;text-align:center}
+.overlay.hidden{display:none}
+.panel{max-width:440px;width:100%;padding:22px 18px;background:#121d32f2;border:2px solid #51627d;border-radius:14px;box-shadow:0 8px 0 #080d18}
+h1{margin:0 0 8px;color:var(--yellow);font-size:clamp(26px,6vw,42px);line-height:1.05}
+.panel p{line-height:1.5;color:#d8e4fa;margin:8px 0 16px}
+button{border:0;border-radius:10px;padding:12px 17px;font:900 15px system-ui;cursor:pointer;background:var(--yellow);color:#172033;box-shadow:0 4px 0 #9c7014}
+button:active{transform:translateY(2px);box-shadow:0 2px 0 #9c7014}
+.smallbtn{padding:8px 10px;font-size:13px;box-shadow:none;background:#263750;color:#fff;border:1px solid #435674}
+.controls{display:flex;justify-content:space-between;align-items:center;gap:12px;color:#b9c7df;font-size:12px}
+.mobile-controls{display:flex;gap:8px}
+.mobile-controls button{min-width:60px;padding:10px 15px}
+.note{text-align:center;font-size:11px;color:#8393ad}
+#loading{z-index:5;background:linear-gradient(135deg,#101827,#1d2d4a 65%,#101827)}
+.load-panel{max-width:460px;width:100%;padding:25px 20px;background:#111b2ff5;border:2px solid #455a78;border-radius:18px;box-shadow:0 0 45px #72f1ff22}
+.logo{width:76px;height:76px;margin:0 auto 14px;display:grid;place-items:center;border:3px solid var(--yellow);border-radius:18px;background:#202f49;box-shadow:5px 5px 0 #7b5c18;font-size:40px;transform:rotate(-3deg)}
+.loading-title{font-size:clamp(27px,6vw,40px);font-weight:1000;letter-spacing:2px;color:var(--yellow);margin:0}
+.loading-sub{margin:5px 0 18px;color:var(--cyan);font-weight:800;letter-spacing:3px;font-size:12px}
+.credit{margin:0 0 18px;font-size:14px;color:#e7edff}
+.credit strong{color:var(--yellow)}
+.progress-shell{height:14px;border:2px solid #60708a;border-radius:20px;background:#0b1220;overflow:hidden}
+.progress{height:100%;width:0;background:repeating-linear-gradient(90deg,var(--yellow) 0 16px,#ffec91 16px 20px);transition:width .15s linear}
+.load-status{display:flex;justify-content:space-between;gap:10px;margin-top:8px;font-size:11px;color:#b9c7df;font-weight:800}
+.blink{animation:blink 1s steps(2,start) infinite}
+@keyframes blink{to{visibility:hidden}}
+@media(max-width:520px){body{padding:7px}.app{gap:7px}.pill{padding:6px 8px;font-size:11px}.controls{font-size:10px}.panel{padding:16px 12px}.gameframe{border-width:2px}}
+</style>
+</head>
+<body>
+<main class="app">
+  <header class="topbar">
+    <div class="brand">CAT <span>GAMES</span></div>
+    <div class="stats">
+      <div class="pill">SCORE: <span id="score">0</span></div>
+      <div class="pill">BEST: <span id="best">0</span></div>
+      <button id="soundBtn" class="smallbtn" aria-label="Toggle sound">🔊 SOUND</button>
+    </div>
+  </header>
+  <section class="gameframe">
+    <canvas id="game" width="960" height="540" aria-label="CAT GAMES endless runner"></canvas>
+
+    <div class="overlay" id="loading">
+      <div class="load-panel">
+        <div class="logo">🐱</div>
+        <p class="loading-title">CAT GAMES</p>
+        <p class="loading-sub">ENDLESS RUNNER</p>
+        <p class="credit">THIS GAME WAS CREATED BY<br><strong>CJ</strong> <span style="color:#72f1ff">AND</span> <strong>FS</strong></p>
+        <div class="progress-shell"><div class="progress" id="progress"></div></div>
+        <div class="load-status"><span id="loadStatus">Loading game assets</span><span id="percent">0%</span></div>
+        <p style="font-size:10px;color:#8fa1bd;margin:16px 0 0">GET READY TO RUN <span class="blink">_</span></p>
+      </div>
+    </div>
+
+    <div class="overlay hidden" id="menu">
+      <div class="panel">
+        <h1 id="menuTitle">CAT RUN!</h1>
+        <p id="menuText">Jump over obstacles, collect coins, and see how long you can last.</p>
+        <button id="playBtn">▶ START RUNNING</button>
+      </div>
+    </div>
+  </section>
+  <div class="controls">
+    <span>SPACE / ↑ / TAP TO JUMP</span>
+    <div class="mobile-controls">
+      <button id="jumpBtn" aria-label="Jump">⬆ JUMP</button>
+      <button id="pauseBtn" class="smallbtn">Ⅱ PAUSE</button>
+    </div>
+  </div>
+  <div class="note">CAT GAMES • CREATED BY CJ AND FS • Keep running and beat your best score!</div>
+</main>
+<script>
+(() => {
+  const canvas = document.getElementById('game'), ctx = canvas.getContext('2d');
+  const scoreEl = document.getElementById('score'), bestEl = document.getElementById('best');
+  const loading = document.getElementById('loading'), menu = document.getElementById('menu');
+  const progress = document.getElementById('progress'), percent = document.getElementById('percent');
+  const loadStatus = document.getElementById('loadStatus');
+  let best = 0;
+  try { best = Number(localStorage.getItem('catGamesBest') || 0); } catch(e) {}
+  bestEl.textContent = best;
+  let running = false, paused = false, over = false, soundOn = true, audioCtx = null;
+  let score = 0, speed = 6, frame = 0, groundY = 430, obstacles = [], coins = [], clouds = [];
+  const player = {x:130,y:0,w:48,h:48,vy:0,onGround:true};
+  player.y = groundY-player.h;
+  for(let i=0;i<6;i++) clouds.push({x:i*190+30,y:45+(i%3)*48,s:0.7+(i%3)*0.25});
+  function beep(freq=520,duration=.07) {
+    if(!soundOn) return;
+    try { audioCtx ||= new (window.AudioContext || window.webkitAudioContext)();
+      const osc=audioCtx.createOscillator(), gain=audioCtx.createGain();
+      osc.frequency.value=freq; osc.type='square'; gain.gain.value=.035;
+      osc.connect(gain); gain.connect(audioCtx.destination); osc.start(); gain.gain.exponentialRampToValueAtTime(.001,audioCtx.currentTime+duration); osc.stop(audioCtx.currentTime+duration);
+    } catch(e) {}
+  }
+  function roundedRect(x,y,w,h,r,fill){ctx.fillStyle=fill;ctx.beginPath();ctx.roundRect(x,y,w,h,r);ctx.fill();}
+  function drawCat(x,y) {
+    // Pixel-inspired cat hero
+    ctx.fillStyle='#26334b'; ctx.fillRect(x+8,y+15,32,29);
+    ctx.fillStyle='#26334b'; ctx.fillRect(x+5,y+2,12,19);ctx.fillRect(x+31,y+2,12,19);
+    ctx.fillStyle='#ffd84d';ctx.fillRect(x+10,y+8,5,5);ctx.fillRect(x+33,y+8,5,5);
+    ctx.fillStyle='#fff';ctx.fillRect(x+12,y+20,7,8);ctx.fillRect(x+29,y+20,7,8);
+    ctx.fillStyle='#172033';ctx.fillRect(x+15,y+22,3,5);ctx.fillRect(x+31,y+22,3,5);
+    ctx.fillStyle='#ff8ba7';ctx.fillRect(x+22,y+28,5,4);
+    ctx.fillStyle='#fff';ctx.fillRect(x+6,y+31,10,4);ctx.fillRect(x+32,y+31,10,4);
+    ctx.fillStyle='#26334b';ctx.fillRect(x+10,y+42,9,6);ctx.fillRect(x+30,y+42,9,6);
+    ctx.strokeStyle='#26334b';ctx.lineWidth=4;ctx.beginPath();ctx.moveTo(x+38,y+35);ctx.quadraticCurveTo(x+52,y+31,x+47,y+20);ctx.stroke();
+    if(player.onGround && running && !paused && !over && frame%16<8){ctx.fillStyle='#ff8ba7';ctx.fillRect(x+10,y+46,9,3);ctx.fillRect(x+31,y+46,9,3);}
+  }
+  function drawBackground() {
+    const sky=ctx.createLinearGradient(0,0,0,540);sky.addColorStop(0,'#87ddff');sky.addColorStop(1,'#d8f8ff');ctx.fillStyle=sky;ctx.fillRect(0,0,960,540);
+    // sun
+    ctx.fillStyle='#fff0a1';ctx.fillRect(770,55,60,60);ctx.fillRect(785,40,30,90);ctx.fillRect(755,70,90,30);
+    clouds.forEach(c=>{ctx.fillStyle='#fff';ctx.fillRect(c.x,c.y,76*c.s,23*c.s);ctx.fillRect(c.x+14*c.s,c.y-12*c.s,30*c.s,20*c.s);ctx.fillRect(c.x+45*c.s,c.y-7*c.s,24*c.s,18*c.s);});
+    ctx.fillStyle='#7ecf9b';ctx.beginPath();ctx.moveTo(0,365);ctx.lineTo(140,265);ctx.lineTo(270,365);ctx.lineTo(410,280);ctx.lineTo(570,365);ctx.lineTo(730,250);ctx.lineTo(960,365);ctx.lineTo(960,540);ctx.lineTo(0,540);ctx.fill();
+    ctx.fillStyle='#4baf7b';ctx.fillRect(0,groundY,960,110);
+    ctx.fillStyle='#a3e77e';ctx.fillRect(0,groundY,960,13);
+    ctx.fillStyle='#36875e';
+    for(let x=-(frame*speed*.7%70);x<960;x+=70){ctx.fillRect(x,groundY+36,28,7);ctx.fillRect(x+30,groundY+69,17,6);}
+  }
+  function drawObstacle(o) {
+    if(o.type==='cactus'){
+      ctx.fillStyle='#277d58';ctx.fillRect(o.x+10,o.y,22,o.h);ctx.fillRect(o.x,o.y+15,12,9);ctx.fillRect(o.x,o.y+15,8,23);ctx.fillRect(o.x+30,o.y+25,12,9);ctx.fillRect(o.x+34,o.y+25,8,21);
+      ctx.fillStyle='#49bb7b';ctx.fillRect(o.x+14,o.y+4,5,o.h-7);
+    } else {
+      ctx.fillStyle='#a94c54';ctx.fillRect(o.x,o.y+10,o.w,o.h-10);ctx.fillStyle='#f07d6c';ctx.fillRect(o.x+5,o.y+15,o.w-10,6);ctx.fillStyle='#6e384b';ctx.fillRect(o.x-4,o.y+o.h-6,o.w+8,6);
+    }
+  }
+  function drawCoin(c) {
+    ctx.fillStyle='#e49c18';ctx.fillRect(c.x+4,c.y,17,26);ctx.fillStyle='#ffdf55';ctx.fillRect(c.x,c.y+4,25,18);ctx.fillStyle='#fff3a2';ctx.fillRect(c.x+7,c.y+6,5,12);
+  }
+  function render() {
+    drawBackground();
+    obstacles.forEach(drawObstacle);coins.forEach(drawCoin);
+    drawCat(player.x,player.y);
+    if(!running&&!over) {
+      ctx.fillStyle='#18243a';ctx.font='bold 22px system-ui';ctx.textAlign='center';ctx.fillText('READY, CAT?',480,170);
+    }
+    if(paused&&running) {ctx.fillStyle='#101827aa';ctx.fillRect(0,0,960,540);ctx.fillStyle='#fff';ctx.font='bold 42px system-ui';ctx.textAlign='center';ctx.fillText('PAUSED',480,270);}
+  }
+  function reset() {
+    score=0;speed=6;frame=0;obstacles=[];coins=[];player.y=groundY-player.h;player.vy=0;player.onGround=true;
+    scoreEl.textContent='0';running=true;paused=false;over=false;menu.classList.add('hidden');beep(620);
+  }
+  function jump() {
+    if(!running){if(over||!menu.classList.contains('hidden'))reset();return;}
+    if(paused)return;
+    if(player.onGround){player.vy=-15.5;player.onGround=false;beep(700,.06);}
+  }
+  function endGame() {
+    running=false;over=true;beep(180,.22);
+    const finalScore=Math.floor(score);
+    if(finalScore>best){best=finalScore;bestEl.textContent=best;try{localStorage.setItem('catGamesBest',best);}catch(e){}}
+    document.getElementById('menuTitle').textContent='GAME OVER!';
+    document.getElementById('menuText').textContent='Your score: '+finalScore+' • Best: '+best+'. Ready for another run?';
+    document.getElementById('playBtn').textContent='↻ PLAY AGAIN';
+    menu.classList.remove('hidden');
+  }
+  function update() {
+    if(running&&!paused) {
+      frame++;score+=.12;speed=Math.min(12,6+score/180);scoreEl.textContent=Math.floor(score);
+      player.vy+=.72;player.y+=player.vy;
+      if(player.y>=groundY-player.h){player.y=groundY-player.h;player.vy=0;player.onGround=true;}
+      if(frame%72===0)obstacles.push({x:990,y:groundY-38,w:30+Math.random()*15,h:38,type:Math.random()<.65?'cactus':'box'});
+      if(frame%95===30)coins.push({x:990,y:groundY-100-Math.random()*65});
+      obstacles.forEach(o=>o.x-=speed);coins.forEach(c=>c.x-=speed);
+      obstacles=obstacles.filter(o=>o.x+o.w>0);coins=coins.filter(c=>c.x+25>0);
+      clouds.forEach(c=>{c.x-=c.s*.7;if(c.x<-100)c.x=1000;});
+      for(const o of obstacles){
+        if(player.x+player.w-8>o.x+4&&player.x+8<o.x+o.w-4&&player.y+player.h-5>o.y+8){endGame();break;}
+      }
+      coins=coins.filter(c=>{
+        if(player.x+player.w>c.x&&player.x<c.x+25&&player.y+player.h>c.y&&player.y<c.y+26){score+=10;beep(900,.05);return false;}
+        return true;
+      });
+    } else {
+      frame++;
+      clouds.forEach(c=>{c.x-=.25*c.s;if(c.x<-100)c.x=1000;});
+    }
+    render();requestAnimationFrame(update);
+  }
+  document.getElementById('playBtn').addEventListener('click',reset);
+  document.getElementById('jumpBtn').addEventListener('pointerdown',e=>{e.preventDefault();jump();});
+  canvas.addEventListener('pointerdown',()=>{if(!loading.classList.contains('hidden'))return;jump();});
+  document.addEventListener('keydown',e=>{
+    if(['Space','ArrowUp','KeyW'].includes(e.code)){e.preventDefault();jump();}
+    if(e.code==='Escape'||e.code==='KeyP')togglePause();
+  });
+  function togglePause(){if(!running)return;paused=!paused;document.getElementById('pauseBtn').textContent=paused?'▶ RESUME':'Ⅱ PAUSE';if(paused)beep(320);else beep(480);}
+  document.getElementById('pauseBtn').addEventListener('click',togglePause);
+  document.getElementById('soundBtn').addEventListener('click',()=>{
+    soundOn=!soundOn;document.getElementById('soundBtn').textContent=soundOn?'🔊 SOUND':'🔇 MUTED';if(soundOn)beep(600);
+  });
+
+  // Branded loading screen; progress completes before the game menu appears.
+  const stages=['Loading game assets','Building pixel world','Preparing CAT runner','Almost ready'];
+  let load=0,stage=0;
+  const loadTimer=setInterval(()=>{
+    load=Math.min(100,load+Math.floor(4+Math.random()*10));
+    const newStage=Math.min(stages.length-1,Math.floor(load/26));
+    if(newStage!==stage){stage=newStage;loadStatus.textContent=stages[stage];}
+    progress.style.width=load+'%';percent.textContent=load+'%';
+    if(load>=100){
+      clearInterval(loadTimer);loadStatus.textContent='Game loaded!';
+      setTimeout(()=>{loading.classList.add('hidden');menu.classList.remove('hidden');},450);
+    }
+  },130);
+  render();requestAnimationFrame(update);
+})();
+</script>
+</body>
+</html>
